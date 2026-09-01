@@ -103,10 +103,36 @@ layout instead of reshuffling.
 
 ---
 
+## Two practice modes
+
+Chosen on the setup screen before each session.
+
+### Study mode (default)
+
+Answer a question, press **Check Answer**, and the result appears immediately:
+
+- the correct option is highlighted in green, your wrong pick in red;
+- a verdict banner says whether you were right, and names the correct option;
+- the explanation for that question is shown straight away.
+
+The question then locks, so the revealed explanation cannot be used to change the
+answer. The question palette also shows which questions you got right and wrong.
+
+### Exam mode
+
+Nothing is revealed while you work — no correct answers, no explanations, and no
+correctness hints in the palette. Your score and all explanations appear only after
+you finish the session. This is the behaviour required by the original brief.
+
+Both modes share the same scoring, results, and review screens.
+
+---
+
 ## Features
 
 - Session setup: 10 / 25 / all 50 questions, filtered by All / Basic / Intermediate
-  / Advanced. Requesting more than are available caps silently rather than erroring.
+  / Advanced, in Study or Exam mode. Requesting more than are available caps
+  silently rather than erroring.
 - One question per screen, with progress bar, elapsed timer, and answer counters.
 - Question palette showing current / answered / unanswered / flagged, with direct
   jump to any question.
@@ -118,7 +144,8 @@ layout instead of reshuffling.
   status badges — filterable by All / Incorrect / Unanswered / Flagged.
 - Session autosaves to `localStorage`; reopening offers **Resume Practice**.
 - Keyboard: `←` / `→` to move between questions (mirrored in RTL), `1`–`4` to select
-  an option, `Esc` to dismiss a dialog.
+  an option, `Enter` to check the answer then advance (study mode), `Esc` to dismiss
+  a dialog.
 - Difficulty is hidden while answering and shown only in review, so it can't hint at
   the answer.
 

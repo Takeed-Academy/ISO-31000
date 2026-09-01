@@ -506,6 +506,135 @@ html[lang="ar"] .question-text { line-height: 1.95; }
 
 .answer-text { min-inline-size: 0; overflow-wrap: anywhere; }
 
+/* ------------------------------------------- study mode: instant reveal */
+
+.mode-hint {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  color: var(--muted);
+  background: var(--soft);
+  border-inline-start: 3px solid var(--teal);
+  border-radius: 6px;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.study-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-block-end: 18px;
+}
+
+/* Revealed options are disabled buttons — keep them fully legible. */
+.answer-option.is-revealed {
+  cursor: default;
+  opacity: 1;
+}
+
+.answer-option.is-revealed:hover {
+  border-color: var(--line);
+  background: var(--paper);
+}
+
+.answer-option.is-right,
+.answer-option.is-right:hover {
+  background: #e7f1e7;
+  border-color: #8fbc91;
+  box-shadow: inset 0 0 0 1px #8fbc91;
+}
+
+.answer-option.is-right .answer-letter {
+  color: #2c4c30;
+  background: #d5e7d6;
+  border-color: #b6d3b7;
+}
+
+.answer-option.is-wrong,
+.answer-option.is-wrong:hover {
+  background: #f8eaeb;
+  border-color: #c98d94;
+  box-shadow: inset 0 0 0 1px #c98d94;
+}
+
+.answer-option.is-wrong .answer-letter {
+  color: #7d2f37;
+  background: #f0d8da;
+  border-color: #dcb4b8;
+}
+
+/* A revealed-but-unselected wrong option stays neutral and recedes. */
+.answer-option.is-revealed:not(.is-right):not(.is-wrong) {
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.option-mark { margin-inline-start: auto; flex-shrink: 0; align-self: center; }
+.option-mark.is-right { color: var(--green); }
+.option-mark.is-wrong { color: var(--maroon); }
+
+.feedback-panel {
+  padding: 16px 18px;
+  margin-block-end: 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-inline-start-width: 4px;
+}
+
+.feedback-panel.is-correct { background: #f2f8f2; border-color: #b6d3b7; border-inline-start-color: var(--green); }
+.feedback-panel.is-incorrect { background: #fdf4f4; border-color: #dcb4b8; border-inline-start-color: var(--maroon); }
+
+.feedback-verdict {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.feedback-panel.is-correct .feedback-verdict { color: #2c4c30; }
+.feedback-panel.is-incorrect .feedback-verdict { color: #7d2f37; }
+
+.feedback-icon { display: inline-grid; place-items: center; }
+
+.feedback-correct-line {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.feedback-panel .explanation { margin: 0; background: rgba(255, 255, 255, 0.72); }
+
+.locked-note {
+  color: var(--muted);
+  font-size: 13.5px;
+  font-style: italic;
+}
+
+.question-jump.is-right {
+  color: #2c4c30;
+  background: #d5e7d6;
+  border-color: #8fbc91;
+}
+
+.question-jump.is-wrong {
+  color: #7d2f37;
+  background: #f0d8da;
+  border-color: #c98d94;
+}
+
+/* Current-question highlight must win over the correctness tint. */
+.question-jump.is-current,
+.question-jump.is-current.is-right,
+.question-jump.is-current.is-wrong {
+  color: #fff;
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
 .question-actions {
   display: flex;
   justify-content: space-between;

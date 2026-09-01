@@ -51,6 +51,11 @@
       setupHint: "اختر عدد الأسئلة ومستوى الصعوبة، ثم ابدأ. يتم اختيار الأسئلة عشوائيًا في كل جلسة جديدة.",
       countLabel: "عدد الأسئلة",
       difficultyLabel: "مستوى الصعوبة",
+      modeLabel: "نمط التدريب",
+      modeStudy: "وضع التعلّم",
+      modeExam: "وضع الاختبار",
+      modeStudyHint: "بعد اختيار الإجابة اضغط «تحقق من الإجابة» لعرض الإجابة الصحيحة والشرح فورًا، ثم انتقل إلى السؤال التالي.",
+      modeExamHint: "لا تظهر الإجابات أثناء الحل. تُعرض النتيجة والشرح بعد إنهاء الجلسة بالكامل.",
       count10: "10 أسئلة",
       count25: "25 سؤالًا",
       count50: "جميع الأسئلة (50)",
@@ -83,6 +88,13 @@
       flag: "تعليم للمراجعة",
       unflag: "إلغاء التعليم",
       finish: "إنهاء التدريب",
+      checkAnswer: "تحقق من الإجابة",
+      selectFirst: "اختر إجابة أولًا",
+      feedbackCorrect: "إجابة صحيحة",
+      feedbackIncorrect: "إجابة غير صحيحة",
+      feedbackCorrectIs: "الإجابة الصحيحة هي الخيار {letter}.",
+      answerLocked: "تم تسجيل إجابتك لهذا السؤال ولا يمكن تغييرها.",
+      studyProgress: "{n} تم التحقق منها",
       questionMap: "لوحة الأسئلة",
       toggleMap: "لوحة الأسئلة",
       legendCurrent: "الحالي",
@@ -168,6 +180,11 @@
       setupHint: "Choose how many questions and which difficulty level, then begin. Questions are selected at random for every new session.",
       countLabel: "Number of questions",
       difficultyLabel: "Difficulty level",
+      modeLabel: "Practice mode",
+      modeStudy: "Study mode",
+      modeExam: "Exam mode",
+      modeStudyHint: "After choosing an answer, press “Check Answer” to reveal the correct option and its explanation straight away, then move on.",
+      modeExamHint: "Answers stay hidden while you work. Your score and the explanations appear once you finish the session.",
       count10: "10 Questions",
       count25: "25 Questions",
       count50: "All 50 Questions",
@@ -200,6 +217,13 @@
       flag: "Flag for Review",
       unflag: "Unflag",
       finish: "Finish Practice",
+      checkAnswer: "Check Answer",
+      selectFirst: "Choose an answer first",
+      feedbackCorrect: "Correct",
+      feedbackIncorrect: "Not correct",
+      feedbackCorrectIs: "The correct answer is option {letter}.",
+      answerLocked: "Your answer to this question is recorded and cannot be changed.",
+      studyProgress: "{n} checked",
       questionMap: "Question Palette",
       toggleMap: "Question palette",
       legendCurrent: "Current",
@@ -277,9 +301,13 @@
     return {
       lang: DEFAULT_LANG,
       view: "setup",
-      config: { count: 10, difficulty: "all" },
+      config: { count: 10, difficulty: "all", mode: "study" },
       session: null
     };
+  }
+
+  function validMode(value) {
+    return value === "study" || value === "exam" ? value : "study";
   }
 
   function loadState() {
@@ -293,7 +321,8 @@
         view: "setup",
         config: {
           count: saved.config && saved.config.count ? saved.config.count : 10,
-          difficulty: saved.config && saved.config.difficulty ? saved.config.difficulty : "all"
+          difficulty: saved.config && saved.config.difficulty ? saved.config.difficulty : "all",
+          mode: validMode(saved.config && saved.config.mode)
         },
         session: sanitizeSession(saved.session)
       };
@@ -337,6 +366,15 @@
       if (ids.indexOf(id) !== -1 && session.flags[key] === true) flags[id] = true;
     });
 
+    /* A question can only be "revealed" if it was actually answered — otherwise
+       a tampered save could unlock explanations without committing an answer. */
+    var revealed = {};
+    Object.keys(session.revealed || {}).forEach(function (key) {
+      var id = Number(key);
+      if (ids.indexOf(id) !== -1 && session.revealed[key] === true &&
+        Object.prototype.hasOwnProperty.call(answers, id)) revealed[id] = true;
+    });
+
     var current = Number(session.current);
     if (!Number.isInteger(current) || current < 0 || current >= ids.length) current = 0;
 
@@ -348,6 +386,8 @@
       orders: orders,
       answers: answers,
       flags: flags,
+      revealed: revealed,
+      mode: validMode(session.mode),
       current: current,
       elapsedSeconds: Math.floor(elapsed),
       finished: session.finished === true,
@@ -355,7 +395,8 @@
         ? session.reviewFilter : "all",
       config: {
         count: session.config && session.config.count ? session.config.count : ids.length,
-        difficulty: session.config && session.config.difficulty ? session.config.difficulty : "all"
+        difficulty: session.config && session.config.difficulty ? session.config.difficulty : "all",
+        mode: validMode(session.mode)
       }
     };
   }
@@ -465,7 +506,7 @@
     return arr;
   }
 
-  function startSession(count, difficulty) {
+  function startSession(count, difficulty, mode) {
     var pool = shuffled(availableQuestions(difficulty));
     var take = Math.min(count, pool.length);
     var picked = pool.slice(0, take);
@@ -478,17 +519,20 @@
       orders[q.id] = shuffled(q.en.options.map(function (_, i) { return i; }));
     });
 
-    state.config = { count: count, difficulty: difficulty };
+    var chosenMode = validMode(mode);
+    state.config = { count: count, difficulty: difficulty, mode: chosenMode };
     state.session = {
       ids: ids,
       orders: orders,
       answers: {},
       flags: {},
+      revealed: {},
+      mode: chosenMode,
       current: 0,
       elapsedSeconds: 0,
       finished: false,
       reviewFilter: "all",
-      config: { count: count, difficulty: difficulty }
+      config: { count: count, difficulty: difficulty, mode: chosenMode }
     };
     state.view = "practice";
     saveState();
@@ -519,14 +563,40 @@
     });
   }
 
+  function isStudyMode() {
+    return !!state.session && state.session.mode === "study";
+  }
+
+  /* Once a study-mode answer has been checked the question is locked, so the
+     revealed explanation cannot be used to re-pick the right option. */
+  function isLocked(question) {
+    return isStudyMode() && !!state.session.revealed[question.id];
+  }
+
   function selectAnswer(question, displayPosition) {
+    if (isLocked(question)) return;
     var originalIndex = state.session.orders[question.id][displayPosition];
     state.session.answers[question.id] = originalIndex;
     saveState();
     render();
   }
 
+  function revealAnswer(question) {
+    if (!isStudyMode()) return;
+    if (!Object.prototype.hasOwnProperty.call(state.session.answers, question.id)) return;
+    state.session.revealed[question.id] = true;
+    saveState();
+    render();
+    announce(isCorrect(question.id) ? t("feedbackCorrect") : t("feedbackIncorrect"));
+  }
+
+  function revealedCount() {
+    if (!state.session) return 0;
+    return state.session.ids.filter(function (id) { return state.session.revealed[id]; }).length;
+  }
+
   function clearAnswer(question) {
+    if (isLocked(question)) return;
     delete state.session.answers[question.id];
     saveState();
     render();
@@ -762,6 +832,15 @@
       choiceButton("difficulty", "intermediate", t("diffIntermediate"), state.config.difficulty === "intermediate") +
       choiceButton("difficulty", "advanced", t("diffAdvanced"), state.config.difficulty === "advanced") +
       "</div></div>" +
+      '<div class="option-group" role="group" aria-label="' + esc(t("modeLabel")) + '">' +
+      '<span class="group-label">' + esc(t("modeLabel")) + "</span>" +
+      '<div class="choice-row">' +
+      choiceButton("mode", "study", t("modeStudy"), state.config.mode === "study") +
+      choiceButton("mode", "exam", t("modeExam"), state.config.mode === "exam") +
+      "</div>" +
+      '<p class="mode-hint">' +
+      esc(state.config.mode === "study" ? t("modeStudyHint") : t("modeExamHint")) +
+      "</p></div>" +
       '<p class="availability-note' + (capped ? " is-capped" : "") + '">' +
       esc(capped ? t("cappedNote", { n: num(available) }) : t("availableNote", { n: num(available) })) +
       "</p>" +
@@ -796,14 +875,63 @@
     var percent = Math.round((answeredCount() / total) * 100);
     var loc = localized(question);
 
+    var revealed = isStudyMode() && !!s.revealed[question.id];
+    var answeredCorrectly = revealed && selected === question.answer;
+
     var options = displayOptions(question).map(function (opt, position2) {
       var isSelected = hasAnswer && selected === opt.originalIndex;
-      return '<button class="answer-option' + (isSelected ? " is-selected" : "") +
-        '" type="button" data-select="' + position2 + '" aria-pressed="' + (isSelected ? "true" : "false") + '">' +
+      var classes = ["answer-option"];
+      var marker = "";
+
+      if (isSelected) classes.push("is-selected");
+
+      if (revealed) {
+        classes.push("is-revealed");
+        if (opt.originalIndex === question.answer) {
+          classes.push("is-right");
+          marker = '<span class="option-mark is-right">' + icon("check") + "</span>";
+        } else if (isSelected) {
+          classes.push("is-wrong");
+          marker = '<span class="option-mark is-wrong">' + icon("cross") + "</span>";
+        }
+      }
+
+      return '<button class="' + classes.join(" ") + '" type="button" data-select="' + position2 +
+        '" aria-pressed="' + (isSelected ? "true" : "false") + '"' +
+        (revealed ? " disabled" : "") + ">" +
         '<span class="answer-letter">' + String.fromCharCode(65 + position2) + "</span>" +
-        '<span class="answer-text">' + esc(opt.text) + "</span>" +
+        '<span class="answer-text">' + esc(opt.text) + "</span>" + marker +
         "</button>";
     }).join("");
+
+    /* Feedback panel: correctness banner, which option was right, explanation. */
+    var feedback = "";
+    if (revealed) {
+      var correctPosition = s.orders[question.id].indexOf(question.answer);
+      var correctLetter = String.fromCharCode(65 + correctPosition);
+      feedback =
+        '<section class="feedback-panel ' + (answeredCorrectly ? "is-correct" : "is-incorrect") + '"' +
+        ' role="status" aria-live="polite">' +
+        '<p class="feedback-verdict">' +
+        '<span class="feedback-icon">' + icon(answeredCorrectly ? "check" : "cross") + "</span>" +
+        esc(answeredCorrectly ? t("feedbackCorrect") : t("feedbackIncorrect")) +
+        "</p>" +
+        (answeredCorrectly ? "" :
+          '<p class="feedback-correct-line">' + esc(t("feedbackCorrectIs", { letter: correctLetter })) + "</p>") +
+        '<div class="explanation"><strong>' + esc(t("explanation")) + "</strong>" +
+        "<p>" + esc(loc.explanation) + "</p></div>" +
+        "</section>";
+    }
+
+    /* In study mode the primary action is Check → then Next. */
+    var studyActions = "";
+    if (isStudyMode()) {
+      studyActions = revealed
+        ? '<span class="locked-note">' + esc(t("answerLocked")) + "</span>"
+        : '<button class="primary-button" type="button" data-action="reveal"' +
+          (hasAnswer ? "" : " disabled") + ">" + icon("check") +
+          "<span>" + esc(hasAnswer ? t("checkAnswer") : t("selectFirst")) + "</span></button>";
+    }
 
     host.innerHTML =
       '<div class="section-head">' +
@@ -813,6 +941,9 @@
       "</div>" +
       '<div class="metric-row">' +
       "<span>" + esc(t("answeredCount", { n: num(answeredCount()) })) + "</span>" +
+      (isStudyMode()
+        ? "<span>" + esc(t("studyProgress", { n: num(revealedCount()) })) + "</span>"
+        : "") +
       "<span>" + esc(t("flaggedCount", { n: num(flaggedCount()) })) + "</span>" +
       '<span class="timer-metric"><small>' + esc(t("elapsed")) + '</small><strong id="elapsedValue">' +
       formatClock(s.elapsedSeconds) + "</strong></span>" +
@@ -829,19 +960,24 @@
       '<section class="panel-card question-card">' +
       '<p class="question-text">' + esc(loc.question) + "</p>" +
       '<div class="answer-list">' + options + "</div>" +
+      (studyActions ? '<div class="study-action-row">' + studyActions + "</div>" : "") +
+      feedback +
       '<div class="question-actions">' +
       '<div class="button-row">' +
       '<button class="exam-nav-button" type="button" data-action="prev"' + (s.current === 0 ? " disabled" : "") + ">" +
       icon("arrowPrev") + "<span>" + esc(t("previous")) + "</span></button>" +
-      '<button class="exam-nav-button" type="button" data-action="next"' +
+      '<button class="' + (revealed && s.current < total - 1 ? "primary-button" : "exam-nav-button") +
+      '" type="button" data-action="next"' +
       (s.current === total - 1 ? " disabled" : "") + "><span>" + esc(t("next")) + "</span>" + icon("arrowNext") + "</button>" +
       "</div>" +
       '<div class="button-row">' +
-      '<button class="ghost-button" type="button" data-action="clear"' + (hasAnswer ? "" : " disabled") + ">" +
+      '<button class="ghost-button" type="button" data-action="clear"' +
+      (hasAnswer && !revealed ? "" : " disabled") + ">" +
       icon("eraser") + "<span>" + esc(t("clearAnswer")) + "</span></button>" +
       '<button class="ghost-button' + (flagged ? " is-flagged" : "") + '" type="button" data-action="flag">' +
       icon("flag") + "<span>" + esc(flagged ? t("unflag") : t("flag")) + "</span></button>" +
-      '<button class="primary-button" type="button" data-action="confirm-finish">' + icon("send") +
+      '<button class="' + (isStudyMode() ? "ghost-button" : "primary-button") +
+      '" type="button" data-action="confirm-finish">' + icon("send") +
       "<span>" + esc(t("finish")) + "</span></button>" +
       "</div></div></section>" +
 
@@ -864,6 +1000,9 @@
       if (index === s.current) classes.push("is-current");
       if (Object.prototype.hasOwnProperty.call(s.answers, id)) classes.push("is-answered");
       else classes.push("is-unanswered");
+      /* Study mode already told the learner the outcome, so the palette may
+         show it too. In exam mode this would leak the answers. */
+      if (isStudyMode() && s.revealed[id]) classes.push(isCorrect(id) ? "is-right" : "is-wrong");
       if (s.flags[id]) classes.push("is-flagged");
       return '<button class="' + classes.join(" ") + '" type="button" data-jump="' + index +
         '" aria-label="' + esc(t("goToQuestion", { n: num(index + 1) })) + '"' +
@@ -1132,6 +1271,7 @@
       var group = choice.getAttribute("data-choice");
       var raw = choice.getAttribute("data-value");
       if (group === "count") state.config.count = Number(raw);
+      else if (group === "mode") state.config.mode = validMode(raw);
       else state.config.difficulty = raw;
       saveState();
       renderSetup();
@@ -1166,7 +1306,10 @@
   function handleAction(action) {
     switch (action) {
       case "start-session":
-        startSession(state.config.count, state.config.difficulty);
+        startSession(state.config.count, state.config.difficulty, state.config.mode);
+        break;
+      case "reveal":
+        revealAnswer(currentQuestion());
         break;
       case "resume-session":
         state.view = "practice";
@@ -1228,6 +1371,13 @@
       var q = currentQuestion();
       var pos = Number(event.key) - 1;
       if (q && pos < state.session.orders[q.id].length) { event.preventDefault(); selectAnswer(q, pos); }
+    } else if (event.key === "Enter" && isStudyMode() && tag !== "button") {
+      /* Enter checks the answer, then advances once it is already revealed. */
+      var cur = currentQuestion();
+      if (!cur) return;
+      event.preventDefault();
+      if (state.session.revealed[cur.id]) goTo(state.session.current + 1);
+      else revealAnswer(cur);
     }
   }
 
