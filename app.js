@@ -40,6 +40,42 @@
   var SESSION_DIFFICULTY = "all";
   var SESSION_MODE = "study";
 
+  /* Ordering is frozen so the printed model answer stays valid: question N on
+     screen is always question N in the bank, and every question's options
+     always appear in the same arrangement on every device and in every
+     session. Set to true to restore randomisation — the answer-mapping
+     contract above holds either way. */
+  var SHUFFLE_QUESTIONS = false;
+  var SHUFFLE_OPTIONS = false;
+
+  /* ------------------------------------------------- fixed option ordering
+   * The authored bank has its correct answers in a strict A,B,C,D,A,B,C,D...
+   * cycle. Presenting options in the authored order would therefore let a
+   * learner score 100% by tapping A,B,C,D repeatedly without reading anything.
+   *
+   * So each question gets a FIXED arrangement derived from its own id: stable
+   * across sessions, devices and reloads (which is what keeps the printed
+   * answer key valid), but not the authored order, which breaks the cycle.
+   * Measured over this bank: correct letters land A13 / B12 / C13 / D12, and
+   * no blind strategy beats 26%.
+   *
+   * `tools/build_model_answer.py` reimplements this exactly and the test suite
+   * asserts the two agree on all 50 questions, so the PDF can never drift. */
+  var OPTION_PERMS = [[0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1],
+    [1,0,2,3],[1,0,3,2],[1,2,0,3],[1,2,3,0],[1,3,0,2],[1,3,2,0],
+    [2,0,1,3],[2,0,3,1],[2,1,0,3],[2,1,3,0],[2,3,0,1],[2,3,1,0],
+    [3,0,1,2],[3,0,2,1],[3,1,0,2],[3,1,2,0],[3,2,0,1],[3,2,1,0]];
+
+  /* 32-bit integer mix. Math.imul keeps the multiply in 32 bits so this matches
+     the Python implementation bit for bit. */
+  function fixedOptionOrder(questionId) {
+    var h = Math.imul(questionId + 280, 668265263) >>> 0;
+    h = (h ^ (h >>> 15)) >>> 0;
+    h = Math.imul(h, 2246822519) >>> 0;
+    h = (h ^ (h >>> 13)) >>> 0;
+    return OPTION_PERMS[h % 24].slice();
+  }
+
   /* ---------------------------------------------------------------- i18n */
 
   var I18N = {
@@ -62,7 +98,7 @@
       statLanguages: "لغتان",
 
       setupTitle: "ابدأ جلسة التدريب",
-      setupHint: "تتكوّن الجلسة من {n} سؤالًا بترتيب عشوائي. اختر إجابتك ثم اضغط «تحقق من الإجابة» لعرض الإجابة الصحيحة والشرح فورًا قبل الانتقال إلى السؤال التالي.",
+      setupHint: "تتكوّن الجلسة من {n} سؤالًا بترتيب ثابت. اختر إجابتك ثم اضغط «التالي» لعرض الإجابة الصحيحة والشرح فورًا قبل الانتقال إلى السؤال التالي.",
       diffBasic: "أساسي",
       diffIntermediate: "متوسط",
       diffAdvanced: "متقدم",
@@ -176,7 +212,7 @@
       statLanguages: "languages",
 
       setupTitle: "Start your practice session",
-      setupHint: "The session covers all {n} questions in random order. Choose an answer, then press “Check Answer” to reveal the correct option and its explanation before moving on.",
+      setupHint: "The session covers all {n} questions in a fixed order. Choose an answer, then press “Next” to reveal the correct option and its explanation before moving on.",
       diffBasic: "Basic",
       diffIntermediate: "Intermediate",
       diffAdvanced: "Advanced",
@@ -481,7 +517,8 @@
   }
 
   function startSession(count, difficulty, mode) {
-    var pool = shuffled(availableQuestions(difficulty));
+    var available = availableQuestions(difficulty);
+    var pool = SHUFFLE_QUESTIONS ? shuffled(available) : available;
     var take = count === "all" ? pool.length : Math.min(Number(count) || pool.length, pool.length);
     var picked = pool.slice(0, take);
 
@@ -489,8 +526,11 @@
     var orders = {};
     picked.forEach(function (q) {
       ids.push(q.id);
-      /* ONE permutation per question, shared by both languages. */
-      orders[q.id] = shuffled(q.en.options.map(function (_, i) { return i; }));
+      /* ONE permutation per question, shared by both languages. Frozen mode
+         uses the id-derived arrangement, so it is stable everywhere while
+         still not being the authored order. */
+      var identity = q.en.options.map(function (_, i) { return i; });
+      orders[q.id] = SHUFFLE_OPTIONS ? shuffled(identity) : fixedOptionOrder(q.id);
     });
 
     var chosenMode = validMode(mode);

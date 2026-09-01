@@ -101,12 +101,32 @@ question, the option order, the selection, and the flag all stay put.
 The permutation is persisted, so resuming after a refresh restores the identical
 layout instead of reshuffling.
 
+### Why options are re-arranged even though nothing is shuffled
+
+The authored bank has its correct answers in a strict `A, B, C, D, A, B, C, D…`
+cycle across all 50 questions. Showing options in the authored order would let a
+learner score 100% by tapping A, B, C, D repeatedly without reading anything.
+
+So each question is given a **fixed arrangement derived from its own id**
+(`fixedOptionOrder` in `app.js`). It is identical on every device, in every
+session, and after every reload — which is what keeps the printed answer key
+valid — but it is not the authored order, so the cycle is broken. Measured over
+this bank the correct letters land A 13 / B 12 / C 13 / D 12, and no blind
+strategy beats 26%.
+
+No question text and no correct answer was altered; only the position an option
+is displayed in changes.
+
+`tools/build_model_answer.py` reimplements the same function, and
+`tools/verify_all.sh` fails the build if the two ever disagree — so the PDF can
+never drift from the site.
+
 ---
 
 ## How a session works
 
-Press **Start Practice**. Every session covers all 50 questions in a random order,
-one question per screen.
+Press **Start Practice**. Every session covers all 50 questions in the same fixed
+order, one question per screen.
 
 Answer a question, then press **Next**. The first press reveals the result rather
 than navigating:
@@ -131,6 +151,8 @@ fixed by three constants at the top of `app.js`:
 var SESSION_SIZE = "all";        // "all", or a number such as 10 / 25
 var SESSION_DIFFICULTY = "all";  // "all" | "basic" | "intermediate" | "advanced"
 var SESSION_MODE = "study";      // "study" | "exam"
+var SHUFFLE_QUESTIONS = false;   // fixed question order
+var SHUFFLE_OPTIONS = false;     // fixed option order
 ```
 
 The engine still supports every one of those values, so shortening sessions,
