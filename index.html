@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ISO 31000:2018 إدارة المخاطر — أسئلة تدريبية | Risk Management Practice Questions</title>
+    <meta name="description" content="بنك تدريبي ثنائي اللغة لمراجعة مبادئ وإطار وعملية إدارة المخاطر وفق ISO 31000:2018. A bilingual practice bank for reviewing the principles, framework, and risk management process of ISO 31000:2018.">
+    <meta name="color-scheme" content="light">
+    <link rel="icon" type="image/png" href="assets/logos/takeed-mark.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#mainContent" id="skipLink">Skip to content</a>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#mainContent" id="brandLink">
+          <img src="assets/logos/takeed-wordmark.png" alt="Takeed Academy">
+          <span>
+            <strong id="brandTitle">ISO 31000:2018</strong>
+            <small id="brandSubtitle">أسئلة تدريبية</small>
+          </span>
+        </a>
+
+        <div class="top-actions">
+          <div class="lang-switch" role="group" id="langSwitch" aria-label="Language">
+            <button class="lang-button" type="button" data-lang="ar" lang="ar">العربية</button>
+            <button class="lang-button" type="button" data-lang="en" lang="en">English</button>
+          </div>
+          <button class="icon-button" type="button" id="restartSession" hidden></button>
+        </div>
+      </header>
+
+      <main class="workspace" id="mainContent" tabindex="-1">
+        <section class="view-pane is-active" id="setupView" aria-labelledby="setupTitle"></section>
+        <section class="view-pane" id="practiceView" aria-labelledby="practiceTitle"></section>
+        <section class="view-pane" id="resultsView" aria-labelledby="resultsTitle"></section>
+        <section class="view-pane" id="reviewView" aria-labelledby="reviewTitle"></section>
+      </main>
+
+      <footer class="site-footer">
+        <p class="footer-brand" id="footerBrand"></p>
+        <p class="footer-note" id="footerNote"></p>
+      </footer>
+    </div>
+
+    <div class="modal-layer" id="modalLayer" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modalCard"></div>
+    </div>
+
+    <p class="sr-live" role="status" aria-live="polite" id="liveRegion"></p>
+
+    <script src="data/questions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
